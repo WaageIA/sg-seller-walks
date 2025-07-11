@@ -7,12 +7,15 @@ import { VendedoresTable } from "./vendedores-table"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Users, UserCheck, Clock, RefreshCw, AlertCircle } from "lucide-react"
+import { useToast } from "@/components/ui/use-toast"
+import { Users, UserCheck, Clock, RefreshCw, AlertCircle, UserPlus } from "lucide-react"
 
 export function Dashboard() {
   const [vendedores, setVendedores] = useState<Vendedor[]>([])
   const [loading, setLoading] = useState(true)
+  const [isSyncing, setIsSyncing] = useState(false)
   const [error, setError] = useState("")
+  const { toast } = useToast()
 
   const loadVendedores = async () => {
     try {
@@ -22,8 +25,57 @@ export function Dashboard() {
       setError("")
     } catch (err: any) {
       setError(err.message || "Erro ao carregar vendedores")
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: err.message || "Não foi possível carregar os vendedores.",
+      })
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleSyncFromCRM = async () => {
+    setIsSyncing(true)
+    setError("")
+    try {
+      const webhookUrl = process.env.NEXT_PUBLIC_CRM_WEBHOOK_URL
+      if (!webhookUrl) {
+        throw new Error("A URL do webhook do CRM não está configurada.")
+      }
+
+      const response = await fetch(webhookUrl, {
+        method: "POST",
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.message || `Erro na sincronização: ${response.statusText}`)
+      }
+
+      toast({
+        title: "Sincronização Iniciada",
+        description: "Buscando vendedores do CRM. A lista será atualizada em breve.",
+      })
+
+      // Aguarda um momento para o webhook processar e então atualiza a lista
+      setTimeout(() => {
+        loadVendedores()
+        toast({
+          title: "Sucesso",
+          description: "A lista de vendedores foi atualizada.",
+        })
+      }, 3000) // 3 segundos de delay
+
+    } catch (err: any) {
+      setError(err.message)
+      toast({
+        variant: "destructive",
+        title: "Erro ao Sincronizar",
+        description: err.message,
+      })
+    } finally {
+      setIsSyncing(false)
     }
   }
 
@@ -37,7 +89,7 @@ export function Dashboard() {
     pendentes: vendedores.filter((v) => v.status === false).length,
   }
 
-  if (loading) {
+  if (loading && vendedores.length === 0) {
     return (
       <div className="flex items-center justify-center h-64">
         <RefreshCw className="h-8 w-8 animate-spin text-blue-600" />
@@ -53,10 +105,24 @@ export function Dashboard() {
           <h1 className="text-2xl sm:text-3xl font-bold">Gerenciar</h1>
           <p className="text-sm text-muted-foreground">Gerencie os vendedores e suas ativações</p>
         </div>
-        <Button onClick={loadVendedores} variant="outline" size="sm">
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Atualizar
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button onClick={handleSyncFromCRM} variant="outline" size="sm" disabled={isSyncing || loading}>
+            {isSyncing ? (
+              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <UserPlus className="h-4 w-4 mr-2" />
+            )}
+            Buscar do CRM
+          </Button>
+          <Button onClick={loadVendedores} variant="outline" size="sm" disabled={loading || isSyncing}>
+            {loading && !isSyncing ? (
+              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <RefreshCw className="h-4 w-4 mr-2" />
+            )}
+            Atualizar
+          </Button>
+        </div>
       </div>
 
       {/* Stats Cards */}
