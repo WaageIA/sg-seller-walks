@@ -39,19 +39,16 @@ export function Dashboard() {
     setIsSyncing(true)
     setError("")
     try {
-      const webhookUrl = process.env.NEXT_PUBLIC_CRM_WEBHOOK_URL
-      if (!webhookUrl) {
-        throw new Error("A URL do webhook do CRM não está configurada.")
-      }
-
-      const response = await fetch(webhookUrl, {
+      const response = await fetch("/api/sync-crm", {
         method: "POST",
       })
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
-        throw new Error(errorData.message || `Erro na sincronização: ${response.statusText}`)
+        throw new Error(errorData.error || `Erro na sincronização: ${response.statusText}`)
       }
+
+      const result = await response.json()
 
       toast({
         title: "Sincronização Iniciada",
