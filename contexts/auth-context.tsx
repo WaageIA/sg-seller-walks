@@ -43,13 +43,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const signIn = async (email: string, password: string) => {
-    if (isDemoAuth) {
-      // Faz login instantâneo no modo preview
-      setUser({ id: "demo-user", email } as any)
-      return
+    try {
+      if (isDemoAuth) {
+        // Faz login instantâneo no modo preview
+        setUser({ id: "demo-user", email } as any)
+        const { AuditLogger } = await import("@/lib/audit-logger")
+        await AuditLogger.logAuthAttempt(email, true)
+        return
+      }
+      
+      const { error } = await supabaseAuth.auth.signInWithPassword({ email, password })
+      
+      if (error) {
+        const { AuditLogger } = await import("@/lib/audit-logger")
+        await AuditLogger.logAuthAttempt(email, false)
+        throw error
+      }
+      
+      const { AuditLogger } = await import("@/lib/audit-logger")
+      await AuditLogger.logAuthAttempt(email, true)
+    } catch (error) {
+      throw error
     }
-    const { error } = await supabaseAuth.auth.signInWithPassword({ email, password })
-    if (error) throw error
   }
 
   const signOut = async () => {

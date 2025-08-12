@@ -1,25 +1,27 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
+import { withAuth } from "@/lib/auth-middleware"
+import { updateVendedorSchema, validateAndSanitize } from "@/lib/validation"
+import { secureLogger } from "@/lib/secure-logger"
+import { supabaseConfig } from "@/lib/secure-config"
 
-const supabaseIntegrationUrl = process.env.NEXT_PUBLIC_SUPABASE_INTEGRATION_URL!
-const supabaseIntegrationServiceKey = process.env.SUPABASE_INTEGRATION_SERVICE_KEY!
+const supabaseIntegrationAdmin = createClient(
+  supabaseConfig.integration.url!,
+  supabaseConfig.integration.serviceKey!,
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  }
+)
 
-const supabaseIntegrationAdmin = createClient(supabaseIntegrationUrl, supabaseIntegrationServiceKey, {
-  auth: {
-    autoRefreshToken: false,
-    persistSession: false,
-  },
-})
-
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request) => {
   try {
-    const { id, updates } = await request.json()
+    const body = await request.json()
+    const { id, updates } = validateAndSanitize(updateVendedorSchema, body)
 
-    if (!id) {
-      return NextResponse.json({ error: "ID do vendedor não fornecido" }, { status: 400 })
-    }
-
-    console.log(`🔄 API: Atualizando vendedor ${id}:`, updates)
+    secureLogger.info("Atualizando vendedor", { id })
 
     const { data, error } = await supabaseIntegrationAdmin
       .from("vendedores")
@@ -31,18 +33,18 @@ export async function POST(request: NextRequest) {
       .select()
 
     if (error) {
-      console.error("❌ Erro ao atualizar vendedor:", error)
+      secureLogger.error("Erro ao atualizar vendedor", error)
       throw error
     }
 
-    console.log("✅ Vendedor atualizado:", data)
+    secureLogger.success("Vendedor atualizado", { id })
 
     return NextResponse.json({
       success: true,
       data: data[0],
     })
   } catch (error: any) {
-    console.error("💥 Erro geral ao atualizar vendedor:", error)
+    secureLogger.error("Erro geral ao atualizar vendedor", error)
     return NextResponse.json(
       {
         error: error.message || "Erro interno do servidor",
@@ -50,4 +52,4 @@ export async function POST(request: NextRequest) {
       { status: 500 },
     )
   }
-}
+})

@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import type { Vendedor } from "@/types"
+import { supabaseAuth } from "@/lib/supabase-auth"
 import {
   Dialog,
   DialogContent,
@@ -50,10 +51,17 @@ export function AtivarVendedorModal({ vendedor, open, onOpenChange, onSuccess }:
     setError("")
 
     try {
+      const { data: sessionData, error: sessionError } = await supabaseAuth.auth.getSession()
+
+      if (sessionError || !sessionData.session) {
+        throw new Error("Sessão de usuário não encontrada. Faça login novamente.")
+      }
+
       const response = await fetch("/api/create-user", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${sessionData.session.access_token}`,
         },
         body: JSON.stringify({
           email: vendedor.email,

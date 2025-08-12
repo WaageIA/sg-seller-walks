@@ -1,16 +1,16 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { deleteAuthUserAdmin } from "@/lib/supabase-admin"
 import { supabaseData } from "@/lib/supabase-data"
+import { withAuth } from "@/lib/auth-middleware"
+import { deleteUserSchema, validateAndSanitize } from "@/lib/validation"
+import { secureLogger } from "@/lib/secure-logger"
 
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request) => {
   try {
-    const { id_user_crm, email } = await request.json()
+    const body = await request.json()
+    const { id_user_crm, email } = validateAndSanitize(deleteUserSchema, body)
 
-    if (!id_user_crm) {
-      return NextResponse.json({ error: "ID do vendedor não fornecido" }, { status: 400 })
-    }
-
-    console.log(`🗑️ [API] Excluindo vendedor ${id_user_crm} completamente`)
+    secureLogger.info("Excluindo vendedor completamente", { id_user_crm })
 
     // 1. Buscar user_id na tabela cadastros_user (se existir)
     const { data: cadastroData } = await supabaseData
@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
         try {
           await deleteAuthUserAdmin(cadastroData.user_id)
         } catch (authError) {
-          console.warn("⚠️ [API] Erro ao remover usuário do Auth:", authError)
+          secureLogger.warn("Erro ao remover usuário do Auth", authError)
           // Continua mesmo se falhar no Auth
         }
       }
@@ -37,14 +37,14 @@ export async function POST(request: NextRequest) {
     // 4. Remover da tabela user_crm_rdstation
     await supabaseData.from("user_crm_rdstation").delete().eq("id_user_crm", id_user_crm)
 
-    console.log("✅ [API] Vendedor excluído completamente")
+    secureLogger.success("Vendedor excluído completamente")
 
     return NextResponse.json({
       success: true,
       message: "Vendedor excluído completamente!",
     })
   } catch (error: any) {
-    console.error("❌ [API] Erro ao excluir vendedor:", error)
+    secureLogger.error("Erro ao excluir vendedor", error)
     return NextResponse.json(
       {
         error: error.message || "Erro interno do servidor",
@@ -52,4 +52,4 @@ export async function POST(request: NextRequest) {
       { status: 500 },
     )
   }
-}
+})
