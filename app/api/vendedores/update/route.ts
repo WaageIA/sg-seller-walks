@@ -1,6 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
-import { withAuth } from "@/lib/auth-middleware"
 import { updateVendedorSchema, validateAndSanitize } from "@/lib/validation"
 import { secureLogger } from "@/lib/secure-logger"
 import { supabaseConfig } from "@/lib/secure-config"
@@ -16,7 +15,7 @@ const supabaseIntegrationAdmin = createClient(
   }
 )
 
-export const POST = withAuth(async (request) => {
+export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     const { id, updates } = validateAndSanitize(updateVendedorSchema, body)
@@ -52,4 +51,4 @@ export const POST = withAuth(async (request) => {
       { status: 500 },
     )
   }
-})
+}

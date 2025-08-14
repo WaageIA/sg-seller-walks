@@ -16,8 +16,9 @@ export const updateVendedorSchema = z.object({
     email: z.string().email('Email inválido').toLowerCase().trim().optional(),
     telefone: z.string().optional(),
     status: z.boolean().optional(),
-    foto_url: z.string().url('URL inválida').optional().or(z.literal(''))
-  }).refine(data => Object.keys(data).length > 0, {
+    foto: z.string().url('URL inválida').optional().or(z.literal('')).or(z.null()),
+    meta: z.number().optional().or(z.null())
+  }).refine(data => Object.keys(data).some(key => data[key as keyof typeof data] !== undefined), {
     message: 'Pelo menos um campo deve ser fornecido para atualização'
   })
 })

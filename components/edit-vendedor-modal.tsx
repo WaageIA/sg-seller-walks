@@ -107,13 +107,27 @@ export function EditVendedorModal({ vendedor, open, onOpenChange, onSuccess }: E
         fotoUrl = uploadResult.publicUrl
       }
 
-      // Atualizar vendedor
-      const updates: Partial<VendedorDashboard> = {
-        meta: meta ? Number.parseInt(meta) : null,
+      // Preparar dados para atualização
+      const updates: any = {}
+
+      // Adicionar meta se foi alterada
+      if (meta !== (vendedor.meta?.toString() || "")) {
+        updates.meta = meta ? Number.parseInt(meta) : null
       }
 
+      // Adicionar foto se foi alterada
       if (fotoUrl !== vendedor.foto) {
         updates.foto = fotoUrl
+      }
+
+      // Verificar se há algo para atualizar
+      if (Object.keys(updates).length === 0) {
+        toast({
+          title: "Nenhuma alteração",
+          description: "Não há alterações para salvar",
+        })
+        onSuccess()
+        return
       }
 
       const updateResponse = await fetch("/api/vendedores/update", {
