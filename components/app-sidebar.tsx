@@ -24,7 +24,7 @@ const menuItems = [
     icon: Home,
   },
   {
-    title: "Vendedores",
+    title: "Vendedores Ranking Vendas",
     url: "/vendedores",
     icon: Users,
   },

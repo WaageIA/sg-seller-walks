@@ -9,7 +9,8 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { AtivarVendedorModal } from "./ativar-vendedor-modal"
 import { ConfirmModal } from "./confirm-modal"
-import { UserCheck, Search, Filter, UserX, Trash2 } from "lucide-react"
+import { ChangePasswordModal } from "./change-password-modal"
+import { UserCheck, Search, Filter, UserX, Trash2, Key } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 
 interface VendedoresTableProps {
@@ -29,6 +30,13 @@ export function VendedoresTable({ vendedores, onRefresh }: VendedoresTableProps)
   }>({
     open: false,
     type: "deactivate",
+    vendedor: null,
+  })
+  const [changePasswordModal, setChangePasswordModal] = useState<{
+    open: boolean
+    vendedor: Vendedor | null
+  }>({
+    open: false,
     vendedor: null,
   })
   const [loading, setLoading] = useState(false)
@@ -66,6 +74,13 @@ export function VendedoresTable({ vendedores, onRefresh }: VendedoresTableProps)
     setConfirmModal({
       open: true,
       type: "delete",
+      vendedor,
+    })
+  }
+
+  const handleChangePassword = (vendedor: Vendedor) => {
+    setChangePasswordModal({
+      open: true,
       vendedor,
     })
   }
@@ -198,13 +213,27 @@ export function VendedoresTable({ vendedores, onRefresh }: VendedoresTableProps)
                           </Button>
                         )}
 
+                        {/* Botão Trocar Senha - apenas para Ativos */}
+                        {vendedor.status === true && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleChangePassword(vendedor)}
+                            className="text-blue-700 border-blue-300 hover:bg-blue-50 text-xs px-2 py-1 h-7 ml-1"
+                            title="Trocar senha do vendedor"
+                          >
+                            <Key className="h-3 w-3" />
+                            <span className="hidden sm:inline ml-1">Senha</span>
+                          </Button>
+                        )}
+
                         {/* Botão Desativar - apenas para Ativos */}
                         {vendedor.status === true && (
                           <Button
                             size="sm"
                             variant="outline"
                             onClick={() => handleDesativar(vendedor)}
-                            className="text-yellow-700 border-yellow-300 hover:bg-yellow-50 text-xs px-2 py-1 h-7"
+                            className="text-yellow-700 border-yellow-300 hover:bg-yellow-50 text-xs px-2 py-1 h-7 ml-1"
                             title="Desativar vendedor"
                           >
                             <UserX className="h-3 w-3" />
@@ -258,6 +287,13 @@ export function VendedoresTable({ vendedores, onRefresh }: VendedoresTableProps)
         confirmText={confirmModal.type === "deactivate" ? "Desativar" : "Excluir"}
         type={confirmModal.type}
         loading={loading}
+      />
+
+      <ChangePasswordModal
+        vendedor={changePasswordModal.vendedor}
+        open={changePasswordModal.open}
+        onOpenChange={(open) => setChangePasswordModal({ ...changePasswordModal, open })}
+        onSuccess={onRefresh}
       />
     </div>
   )
